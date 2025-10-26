@@ -1,4 +1,4 @@
-from tinygrad import Tensor, nn
+from tinygrad import Tensor, nn, TinyJit
 from tinygrad.device import Device
 from tinygrad.helpers import get_child
 import numpy as np
@@ -73,9 +73,20 @@ if __name__ == "__main__":
         help="Model to load"
     )
 
+    parser.add_argument(
+        "-j",
+        type=bool,
+        default=True,
+        help="Whether to use jit"
+    )
+
     args = parser.parse_args()
 
     unet = U2NET(3,1)
+
+    @TinyJit
+    def jit_unet(x):
+        return unet(x)
 
     if args.m == "fg_small" or args.m == "sky_small":
         unet = U2NETP(3,1)
@@ -103,7 +114,7 @@ if __name__ == "__main__":
 
     print(f"Running U^2 Net on device: {Device.DEFAULT}")
     start = time.perf_counter()
-    pred = inference(unet, image)
+    pred = inference(unet if not args.j else jit_unet, image)
     end = time.perf_counter()
     elapsed_ms = (end - start) * 1000
     print(f"Inference time: {elapsed_ms:.3f} ms")
